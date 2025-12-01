@@ -1,2 +1,29 @@
 [
+  {
+    "nim": "25090520047",
+    "nama": "Febrian Alfarizzi Sumarsono",
+    "kelas": "Teknik Elektro",
+    "mode": "online",
+    "modeLabel": "Online",
+    "timestamp": "2025-12-01T10:58:10.027Z",
+    "faceCode": "72E1A903"
+  },
+  {
+    "nim": "25090520046",
+    "nama": "Gilang Eka Pratama",
+    "kelas": "Teknik Elektro",
+    "mode": "event",
+    "modeLabel": "Event Kampus",
+    "timestamp": "2025-12-01T10:57:44.616Z",
+    "faceCode": "F1B1A11D"
+  },
+  {
+    "nim": "25090520046",
+    "nama": "Gilang Eka Pratama",
+    "kelas": "Teknik Elektro",
+    "mode": "online",
+    "modeLabel": "Online",
+    "timestamp": "2025-12-01T10:55:50.994Z",
+    "faceCode": "F1B1A11D"
+  }
 ]
