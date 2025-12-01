@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Absensi Kampus</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="noise-overlay"></div>
+    <header class="hero">
+      <nav class="nav">
+        <div class="brand">
+          <div class="brand-mark">AK</div>
+          <div>
+            <p>Absensi Kampus</p>
+            <small>Modern Presence System</small>
+          <!-- GitHub configuration moved to source code (script.js) per user preference -->
+          </div>
+        </div>
+        <button class="ghost-btn">Hubungi Admin</button>
+      </nav>
+
+      <div class="hero-content">
+        <div>
+          <p class="eyebrow">Kampus Digital 2025</p>
+          <h1>Satu Portal Absensi, Data Real-Time, Tanpa Ribet.</h1>
+          <p class="lede">
+            Pantau kedisiplinan sivitas akademika lewat dashboard elegan dengan
+            insight berkala, statistik otomatis, dan riwayat presensi yang
+            transparan.
+          </p>
+          <div class="hero-actions">
+            <button class="primary-btn">Mulai Absensi</button>
+            <button class="secondary-btn" id="scroll-history">
+              Lihat Riwayat
+            </button>
+          </div>
+          <div class="hero-metrics">
+            <div>
+              <p class="metric-value">98%</p>
+              <p class="metric-label">Tingkat Kehadiran</p>
+            </div>
+            <div>
+              <p class="metric-value">4K+</p>
+              <p class="metric-label">Mahasiswa Aktif</p>
+            </div>
+            <div>
+              <p class="metric-value">120</p>
+              <p class="metric-label">Program Studi</p>
+            </div>
+          </div>
+        </div>
+        <div class="card glass-card">
+          <div class="card-header">
+            <p>Absensi Cepat</p>
+            <span id="current-date"></span>
+          </div>
+          <form id="attendance-form">
+            <label>
+              NIM
+              <input
+                type="text"
+                name="nim"
+                placeholder="Contoh: 2311001"
+                required
+              />
+            </label>
+            <label>
+              Nama Lengkap
+              <input
+                type="text"
+                name="nama"
+                placeholder="Contoh: Gita Andini"
+                required
+              />
+            </label>
+            <label>
+              Kelas / Prodi
+              <input
+                type="text"
+                name="kelas"
+                placeholder="Teknik Informatika A"
+                required
+              />
+            </label>
+            <label>
+              Mode Kehadiran
+              <select name="mode" required>
+                <option value="">Pilih mode</option>
+                <option value="onsite">On-site</option>
+                <option value="online">Online</option>
+                <option value="event">Event Kampus</option>
+              </select>
+            </label>
+            <button type="submit" class="primary-btn full-width">
+              Tandai Hadir
+            </button>
+            <p class="form-hint">
+              Lokasi otomatis terdeteksi dan disimpan untuk validasi.
+            </p>
+          </form>
+        </div>
+        <div class="card glass-card verify-card">
+          <div class="card-header">
+            <p>Verifikasi Wajah</p>
+            <span>Keamanan biometrik</span>
+          </div>
+          <p class="lede small">
+            Aktifkan kamera Anda untuk mencocokkan wajah dengan data kampus
+            sebelum menyelesaikan absensi.
+          </p>
+          <div class="face-box">
+            <video id="face-video" autoplay playsinline muted></video>
+            <canvas id="face-canvas" hidden></canvas>
+            <div id="face-placeholder">
+              <p>Camera idle</p>
+              <small>Tekan "Mulai Kamera"</small>
+            </div>
+          </div>
+          <div class="face-actions">
+            <button id="start-camera" class="secondary-btn">Mulai Kamera</button>
+            <button id="capture-face" class="ghost-btn" disabled>
+              Ambil Snapshot
+            </button>
+            <button id="verify-face" class="primary-btn" disabled>
+              Verifikasi Wajah
+            </button>
+          </div>
+          <p id="face-status" class="form-hint">Kamera belum aktif.</p>
+        </div>
+      </div>
+    </header>
+
+    <main class="grid">
+      <section class="card dark-card">
+        <header>
+          <p>Kehadiran Hari Ini</p>
+          <span id="attendance-summary">0 Mahasiswa hadir</span>
+        </header>
+        <div class="stat-group">
+          <div>
+            <p class="stat-value" id="onsite-count">0</p>
+            <p class="stat-label">On-site</p>
+          </div>
+          <div>
+            <p class="stat-value" id="online-count">0</p>
+            <p class="stat-label">Online</p>
+          </div>
+          <div>
+            <p class="stat-value" id="event-count">0</p>
+            <p class="stat-label">Event</p>
+          </div>
+        </div>
+        <div class="sparkline">
+          <div class="spark" aria-hidden="true"></div>
+        </div>
+      </section>
+
+      <section class="card glass-card records-card" id="records-card">
+        <header>
+          <div>
+            <p>Riwayat Presensi</p>
+            <small>Terbaru & Terverifikasi</small>
+          </div>
+          <button class="ghost-btn small" id="export-attendance">
+            Ekspor Excel
+          </button>
+        </header>
+        <div class="records" id="records-list">
+          <p class="empty-state">
+            Belum ada data hari ini. Mulai dari mengisi formulir di kanan atas.
+          </p>
+        </div>
+      </section>
+
+      <section class="card highlight-card">
+        <header>
+          <p>Insight Mingguan</p>
+          <small>Analitik otomatis dari aktivitas absensi</small>
+        </header>
+        <ul>
+          <li>Laboratorium AI mencatat 12 sesi hybrid pekan ini.</li>
+          <li>Kelas sore mengalami kenaikan keterlambatan 8%.</li>
+          <li>Event kampus Sabtu lalu dihadiri 740 peserta.</li>
+        </ul>
+      </section>
+
+      <section class="card light-card schedule-card">
+        <header>
+          <p>Agenda Hari Ini</p>
+          <small>Utamakan jadwal prioritas</small>
+        </header>
+        <table>
+          <thead>
+            <tr>
+              <th>Waktu</th>
+              <th>Kegiatan</th>
+              <th>Lokasi</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="agenda-body">
+            <tr>
+              <td>07:30</td>
+              <td>Briefing Dosen</td>
+              <td>Ruang Senat</td>
+              <td><span class="badge">On-track</span></td>
+            </tr>
+            <tr>
+              <td>09:00</td>
+              <td>Kuliah Informatika</td>
+              <td>Auditorium</td>
+              <td><span class="badge badge-warning">Padat</span></td>
+            </tr>
+            <tr>
+              <td>13:30</td>
+              <td>Praktikum Cloud</td>
+              <td>Lab 4</td>
+              <td><span class="badge">On-track</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="enroll-hub">
+        <div class="card studio-card">
+          <header>
+            <div>
+              <p>Studio Pendaftaran Wajah</p>
+              <small>Mode 1:1 untuk ketepatan terbaik</small>
+            </div>
+            <span class="studio-tag">Live Capture</span>
+          </header>
+          <div class="studio-grid">
+            <div class="studio-preview">
+              <div class="preview-guides">
+                <span>Center</span>
+                <span>Eye Level</span>
+                <span>Shoulder</span>
+              </div>
+              <div class="face-box square">
+                <video id="enroll-video" autoplay playsinline muted></video>
+                <canvas id="enroll-canvas" hidden></canvas>
+                <div id="enroll-placeholder">
+                  <p>Kamera belum aktif</p>
+                  <small>Tekan "Mulai Kamera"</small>
+                </div>
+              </div>
+              <div class="studio-overlay">
+                <p>Studio 1:1</p>
+                <small>Gunakan cahaya depan & wajah netral</small>
+              </div>
+            </div>
+            <form id="enroll-form" class="studio-form">
+              <label>
+                NIM
+                <input
+                  type="text"
+                  name="enroll-nim"
+                  placeholder="Contoh: 2311001"
+                  required
+                />
+              </label>
+              <label>
+                Nama Lengkap
+                <input
+                  type="text"
+                  name="enroll-nama"
+                  placeholder="Contoh: Lintang Pradita"
+                  required
+                />
+              </label>
+              <label>
+                Prodi / Fakultas
+                <input
+                  type="text"
+                  name="enroll-prodi"
+                  placeholder="Teknik Informatika"
+                  required
+                />
+              </label>
+
+              <div class="face-actions column">
+                <button type="button" id="enroll-start-camera" class="secondary-btn">
+                  Mulai Kamera
+                </button>
+                <button type="button" id="enroll-capture" class="ghost-btn" disabled>
+                  Ambil Snapshot
+                </button>
+                <button type="submit" id="enroll-submit" class="primary-btn" disabled>
+                  Daftarkan Wajah
+                </button>
+              </div>
+              <p id="enroll-status" class="form-hint">
+                Lengkapi data dan aktifkan kamera untuk mulai mendaftar.
+              </p>
+            </form>
+          </div>
+        </div>
+
+        <div class="card glass-card enroll-card">
+          <header>
+            <div>
+              <p>Daftar Wajah Terdaftar</p>
+              <small>Hasil pendaftaran terbaru</small>
+            </div>
+            <button class="ghost-btn small" id="export-enroll">
+              Ekspor Excel
+            </button>
+            <button class="ghost-btn small" id="delete-selected-enroll">
+              Hapus Terpilih
+            </button>
+            <button class="ghost-btn small" id="delete-all-enroll">
+              Hapus Semua
+            </button>
+          </header>
+          <div class="records enrolled-records" id="enrolled-list">
+            <p class="empty-state">
+              Belum ada wajah terdaftar. Silahkan untuk melakukan registrasi.
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>© 2025 Sistem Absensi Kampus Digital</p>
+      <div class="footer-links">
+        <a href="#">Panduan Pengguna</a>
+        <a href="#">Kebijakan Privasi</a>
+        <a href="#">Status Sistem</a>
+      </div>
+    </footer>
+
+    <script src="script.js" defer></script>
+  </body>
+</html>
+
