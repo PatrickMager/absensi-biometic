@@ -29,6 +29,12 @@ body {
   position: relative;
 }
 
+.button-group {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.75rem;
+}
+
 .noise-overlay {
   position: fixed;
   inset: 0;
@@ -148,6 +154,7 @@ body {
   flex-wrap: wrap;
   margin-top: 1.75rem;
 }
+
 
 .hero-metrics {
   display: grid;
@@ -420,7 +427,7 @@ form {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
   gap: 1.5rem;
   padding: 0 clamp(1.5rem, 4vw, 4rem) 4rem;
   position: relative;
@@ -431,6 +438,7 @@ form {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
   gap: 1.2rem;
+  margin-top: 10px;
 }
 
 .stat-value {

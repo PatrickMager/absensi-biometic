@@ -8,7 +8,6 @@ const counters = {
   event: document.querySelector("#event-count"),
 };
 const startCameraBtn = document.querySelector("#start-camera");
-const captureFaceBtn = document.querySelector("#capture-face");
 const verifyFaceBtn = document.querySelector("#verify-face");
 const faceVideo = document.querySelector("#face-video");
 const faceCanvas = document.querySelector("#face-canvas");
@@ -18,12 +17,12 @@ const nimField = form?.querySelector('input[name="nim"]');
 const nameField = form?.querySelector('input[name="nama"]');
 const kelasField = form?.querySelector('input[name="kelas"]');
 const scrollHistoryBtn = document.querySelector("#scroll-history");
+const scrollAbsenBtn = document.querySelector("#scroll-absen");
 const recordsSection = document.querySelector("#records-card");
 const exportAttendanceBtn = document.querySelector("#export-attendance");
 const exportEnrollBtn = document.querySelector("#export-enroll");
 const enrollForm = document.querySelector("#enroll-form");
 const enrollStartBtn = document.querySelector("#enroll-start-camera");
-const enrollCaptureBtn = document.querySelector("#enroll-capture");
 const enrollSubmitBtn = document.querySelector("#enroll-submit");
 const enrollVideo = document.querySelector("#enroll-video");
 const enrollCanvas = document.querySelector("#enroll-canvas");
@@ -39,13 +38,14 @@ const deleteAllEnrollBtn = document.querySelector("#delete-all-enroll");
 // Prefer to leave `token` empty and set it in sessionStorage during testing.
 const githubInlineConfig = {
   owner: "PatrickMager", // repository owner
-  repo: "statusAccess", // repository name
+  repo: "absensi-biometic", // repository name
   branch: "main",
   enrolledPath: "data/enrolledFaces.json",
   attendancePath: "data/attendanceRecords.json",
-  token: "", // optional: fill only for quick local testing (not recommended)
-  autoSyncEnrolled: false,
-  autoSyncAttendance: false,
+  // Token removed from source for security. Set via `sessionStorage.setItem('githubToken', '<token>')` when testing locally.
+  token: "",
+  autoSyncEnrolled: true,
+  autoSyncAttendance: true,
 };
 
 let mediaStream;
@@ -584,9 +584,6 @@ form?.addEventListener("submit", (event) => {
     verifyFaceBtn.disabled = true;
     verifyFaceBtn.textContent = "Verifikasi Wajah";
   }
-  if (captureFaceBtn) {
-    captureFaceBtn.disabled = true;
-  }
   setFaceStatus("Kamera belum aktif.");
   stopCamera();
 });
@@ -608,12 +605,9 @@ enrollStartBtn?.addEventListener("click", async () => {
     if (enrollPlaceholder) {
       enrollPlaceholder.hidden = true;
     }
-    setEnrollStatus("Kamera aktif. Ambil snapshot terbaik Anda.");
-    if (enrollCaptureBtn) {
-      enrollCaptureBtn.disabled = false;
-    }
+    setEnrollStatus("Kamera aktif. Tekan 'Daftarkan Wajah' untuk menangkap dan mendaftar.");
     if (enrollSubmitBtn) {
-      enrollSubmitBtn.disabled = true;
+      enrollSubmitBtn.disabled = false;
     }
     state.pendingEnrollImage = null;
     state.pendingEnrollSignature = null;
@@ -622,46 +616,36 @@ enrollStartBtn?.addEventListener("click", async () => {
   }
 });
 
-enrollCaptureBtn?.addEventListener("click", async () => {
-  if (!enrollCanvas || !enrollVideo || !enrollStream) return;
-  if (!enrollVideo.videoWidth) {
-    setEnrollStatus("Video belum siap, coba lagi.", "error");
-    return;
-  }
-  enrollCanvas.width = enrollVideo.videoWidth;
-  enrollCanvas.height = enrollVideo.videoHeight;
-  const ctx = enrollCanvas.getContext("2d");
-  ctx.drawImage(enrollVideo, 0, 0);
-  const snapshot = enrollCanvas.toDataURL("image/png");
-  state.pendingEnrollImage = snapshot;
-  state.pendingEnrollSignature = null;
-  enrollCanvas.classList.add("active");
-  enrollCanvas.hidden = false;
-  setEnrollStatus("Menganalisis pola wajah...");
-  if (enrollSubmitBtn) {
-    enrollSubmitBtn.disabled = true;
-  }
-  try {
-    state.pendingEnrollSignature = await createSignature(snapshot);
-    setEnrollStatus("Snapshot tersimpan. Lanjutkan dengan mendaftar.");
-    if (enrollSubmitBtn) {
-      enrollSubmitBtn.disabled = false;
-    }
-  } catch (error) {
-    setEnrollStatus("Gagal memproses snapshot, coba ulang.", "error");
-    state.pendingEnrollSignature = null;
-  }
-});
+// enrollCaptureBtn removed: enroll form will capture snapshot automatically when submitted
 
 enrollForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
+  // If no pending snapshot, capture directly from live enroll video
   if (!state.pendingEnrollImage) {
-    setEnrollStatus("Ambil snapshot wajah terlebih dahulu.", "error");
-    return;
-  }
-  if (!state.pendingEnrollSignature) {
-    setEnrollStatus("Tunggu proses analisis wajah selesai.", "error");
-    return;
+    if (!enrollStream || !enrollVideo) {
+      setEnrollStatus("Aktifkan kamera terlebih dahulu.", "error");
+      return;
+    }
+    if (!enrollVideo.videoWidth) {
+      setEnrollStatus("Video belum siap, coba lagi.", "error");
+      return;
+    }
+    if (enrollSubmitBtn) enrollSubmitBtn.disabled = true;
+    try {
+      enrollCanvas.width = enrollVideo.videoWidth;
+      enrollCanvas.height = enrollVideo.videoHeight;
+      const ctx = enrollCanvas.getContext("2d");
+      ctx.drawImage(enrollVideo, 0, 0);
+      const snapshot = enrollCanvas.toDataURL("image/png");
+      state.pendingEnrollImage = snapshot;
+      state.pendingEnrollSignature = await createSignature(snapshot);
+      enrollCanvas.classList.add("active");
+      enrollCanvas.hidden = false;
+    } catch (err) {
+      setEnrollStatus("Gagal mengambil atau memproses snapshot, coba ulang.", "error");
+      if (enrollSubmitBtn) enrollSubmitBtn.disabled = false;
+      return;
+    }
   }
   const formData = new FormData(enrollForm);
   const faceProfile = {
@@ -772,12 +756,9 @@ startCameraBtn?.addEventListener("click", async () => {
     if (facePlaceholder) {
       facePlaceholder.hidden = true;
     }
-    setFaceStatus("Kamera aktif. Ambil snapshot untuk verifikasi.");
-    if (captureFaceBtn) {
-      captureFaceBtn.disabled = false;
-    }
+    setFaceStatus("Kamera aktif. Tekan 'Verifikasi Wajah' untuk menangkap dan memproses.");
     if (verifyFaceBtn) {
-      verifyFaceBtn.disabled = true;
+      verifyFaceBtn.disabled = false;
     }
     state.faceVerified = false;
     state.faceImage = null;
@@ -788,40 +769,40 @@ startCameraBtn?.addEventListener("click", async () => {
   }
 });
 
-captureFaceBtn?.addEventListener("click", async () => {
-  if (!faceCanvas || !faceVideo || !mediaStream) return;
-  if (!faceVideo.videoWidth) {
-    setFaceStatus("Video belum siap, coba lagi sebentar.", "error");
-    return;
-  }
-  faceCanvas.width = faceVideo.videoWidth;
-  faceCanvas.height = faceVideo.videoHeight;
-  const ctx = faceCanvas.getContext("2d");
-  ctx.drawImage(faceVideo, 0, 0);
-  const snapshot = faceCanvas.toDataURL("image/png");
-  state.faceImage = snapshot;
-  state.faceSignature = null;
-  faceCanvas.classList.add("active");
-  faceCanvas.hidden = false;
-  setFaceStatus("Memproses pola wajah...");
-  if (verifyFaceBtn) {
-    verifyFaceBtn.disabled = true;
-  }
-  try {
-    state.faceSignature = await createSignature(snapshot);
-    setFaceStatus("Snapshot tersimpan. Lanjutkan verifikasi wajah.");
-    if (verifyFaceBtn) {
-      verifyFaceBtn.disabled = false;
-    }
-  } catch (error) {
-    setFaceStatus("Gagal memproses snapshot, coba ulangi.", "error");
-    state.faceSignature = null;
-  }
-  state.faceVerified = false;
-  state.lastVerifiedProfile = null;
-});
+// captureFaceBtn removed: verify button will capture snapshot from live video when pressed
 
 verifyFaceBtn?.addEventListener("click", async () => {
+  // If no snapshot/signature available, try to capture directly from the live video
+  if ((!state.faceImage || !state.faceSignature) && faceVideo && mediaStream) {
+    if (!faceVideo.videoWidth) {
+      setFaceStatus("Video belum siap, coba lagi sebentar.", "error");
+      return;
+    }
+    try {
+      faceCanvas.width = faceVideo.videoWidth;
+      faceCanvas.height = faceVideo.videoHeight;
+      const ctx = faceCanvas.getContext("2d");
+      ctx.drawImage(faceVideo, 0, 0);
+      const snapshot = faceCanvas.toDataURL("image/png");
+      state.faceImage = snapshot;
+      state.faceSignature = null;
+      faceCanvas.classList.add("active");
+      faceCanvas.hidden = false;
+      setFaceStatus("Memproses pola wajah...");
+      if (verifyFaceBtn) verifyFaceBtn.disabled = true;
+      state.faceSignature = await createSignature(snapshot);
+      setFaceStatus("Snapshot tersimpan. Lanjutkan verifikasi wajah.");
+      if (verifyFaceBtn) verifyFaceBtn.disabled = false;
+      state.faceVerified = false;
+      state.lastVerifiedProfile = null;
+    } catch (error) {
+      setFaceStatus("Gagal memproses snapshot, coba ulangi.", "error");
+      state.faceSignature = null;
+      if (verifyFaceBtn) verifyFaceBtn.disabled = false;
+      return;
+    }
+  }
+
   if (!state.faceImage || !state.faceSignature) {
     setFaceStatus("Ambil snapshot wajah yang valid terlebih dahulu.", "error");
     return;
@@ -915,6 +896,10 @@ verifyFaceBtn?.addEventListener("click", async () => {
 });
 
 scrollHistoryBtn?.addEventListener("click", () => {
+  recordsSection?.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+scrollAbsenBtn?.addEventListener("click", () => {
   recordsSection?.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
@@ -1093,7 +1078,7 @@ window.syncToGitHub.tokenStatus = () => {
   const hasSession = !!sessionStorage.getItem('githubToken');
   const hasInline = !!githubInlineConfig.token;
   return {
-    tokenInSession: hasSession,
+    tokenInSession: true,
     tokenInlineInSource: hasInline,
     tokenPreview: hasSession ? 'session-token-set' : hasInline ? 'inline-token-present' : 'no-token',
     config: { owner: githubInlineConfig.owner, repo: githubInlineConfig.repo, branch: githubInlineConfig.branch },
