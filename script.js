@@ -42,8 +42,7 @@ const githubInlineConfig = {
   branch: "main",
   enrolledPath: "data/enrolledFaces.json",
   attendancePath: "data/attendanceRecords.json",
-  // Token removed from source for security. Set via `sessionStorage.setItem('githubToken', '<token>')` when testing locally.
-  token: "",
+  token: "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", // optional: fill only for quick local testing (not recommended)
   autoSyncEnrolled: true,
   autoSyncAttendance: true,
 };
@@ -199,7 +198,47 @@ const b64EncodeUnicode = (str) => {
 const githubPutFile = async ({ owner, repo, path, branch = "main", token, contentStr, message }) => {
   if (!owner || !repo || !path || !token) throw new Error("Konfigurasi GitHub tidak lengkap.");
   const apiBase = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
-  // check if file exists to obtain sha
+
+  const attemptUpdate = async (sha) => {
+    const body = {
+      message: message || `Update ${path}`,
+      content: b64EncodeUnicode(contentStr),
+      branch,
+    };
+    if (sha) body.sha = sha;
+
+    const putRes = await fetch(apiBase, {
+      method: "PUT",
+      headers: {
+        Authorization: `token ${token}`,
+        Accept: "application/vnd.github.v3+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!putRes.ok) {
+      const errText = await putRes.text();
+      if (putRes.status === 409) {
+        // SHA mismatch, fetch latest SHA and retry
+        try {
+          const res = await fetch(`${apiBase}?ref=${encodeURIComponent(branch)}`, {
+            headers: { Authorization: `token ${token}`, Accept: "application/vnd.github.v3+json" },
+          });
+          if (res.ok) {
+            const data = await res.json();
+            return await attemptUpdate(data.sha);
+          }
+        } catch (e) {
+          // ignore and throw original error
+        }
+      }
+      throw new Error(`GitHub API error: ${putRes.status} ${errText}`);
+    }
+    return await putRes.json();
+  };
+
+  // Initial attempt: check if file exists to obtain sha
   let sha = null;
   try {
     const res = await fetch(`${apiBase}?ref=${encodeURIComponent(branch)}`, {
@@ -213,28 +252,7 @@ const githubPutFile = async ({ owner, repo, path, branch = "main", token, conten
     // ignore; we'll try to create
   }
 
-  const body = {
-    message: message || `Update ${path}`,
-    content: b64EncodeUnicode(contentStr),
-    branch,
-  };
-  if (sha) body.sha = sha;
-
-  const putRes = await fetch(apiBase, {
-    method: "PUT",
-    headers: {
-      Authorization: `token ${token}`,
-      Accept: "application/vnd.github.v3+json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-
-  if (!putRes.ok) {
-    const errText = await putRes.text();
-    throw new Error(`GitHub API error: ${putRes.status} ${errText}`);
-  }
-  return await putRes.json();
+  return await attemptUpdate(sha);
 };
 
 const maybeAutoSyncToGitHub = () => {
