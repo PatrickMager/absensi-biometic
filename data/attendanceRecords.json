@@ -1,1 +1,11 @@
-[]
+[
+  {
+    "nim": "123",
+    "nama": "12",
+    "kelas": "12",
+    "mode": "onsite",
+    "modeLabel": "On-site",
+    "timestamp": "2025-12-01T13:00:24.603Z",
+    "faceCode": "5ABD6BC1"
+  }
+]
